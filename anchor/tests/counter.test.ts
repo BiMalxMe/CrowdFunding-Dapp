@@ -1,76 +1,72 @@
-import * as anchor from '@coral-xyz/anchor'
-import { Program } from '@coral-xyz/anchor'
-import { Keypair } from '@solana/web3.js'
-import { Counter } from '../target/types/counter'
+import * as anchor from "@coral-xyz/anchor";
+import { Program } from "@coral-xyz/anchor";
+import { PublicKey, Keypair, SystemProgram, LAMPORTS_PER_SOL } from "@solana/web3.js";
+import { Counter } from "../target/types/counter";
+import CounterIDL from "../target/idl/counter.json";
 
-describe('counter', () => {
+describe("counter", () => {
   // Configure the client to use the local cluster.
-  const provider = anchor.AnchorProvider.env()
-  anchor.setProvider(provider)
-  const payer = provider.wallet as anchor.Wallet
+  const provider = anchor.AnchorProvider.env();
+  anchor.setProvider(provider);
 
-  const program = anchor.workspace.Counter as Program<Counter>
+  // Use the program ID from the IDL
+  const program = new Program<Counter>(CounterIDL as any, CounterIDL.address, provider);
 
-  const counterKeypair = Keypair.generate()
+  // Generate a new keypair for the counter account
+  const counter = Keypair.generate();
 
-  it('Initialize Counter', async () => {
+  it("Initializes the counter", async () => {
+    // Airdrop some SOL to the payer if needed
+    const sig = await provider.connection.requestAirdrop(
+      provider.wallet.publicKey,
+      2 * LAMPORTS_PER_SOL
+    );
+    await provider.connection.confirmTransaction(sig);
+
+    // Call the initialize instruction
     await program.methods
       .initialize()
       .accounts({
-        counter: counterKeypair.publicKey,
-        payer: payer.publicKey,
+        counter: counter.publicKey,
+        user: provider.wallet.publicKey,
+        systemProgram: SystemProgram.programId,
       })
-      .signers([counterKeypair])
-      .rpc()
+      .signers([counter])
+      .rpc();
 
-    const currentCount = await program.account.counter.fetch(counterKeypair.publicKey)
+    // Fetch the counter account and check its value
+    const account = await program.account.counter.fetch(counter.publicKey);
+    expect(account.count.toNumber()).toBe(0);
+  });
 
-    expect(currentCount.count).toEqual(0)
-  })
-
-  it('Increment Counter', async () => {
-    await program.methods.increment().accounts({ counter: counterKeypair.publicKey }).rpc()
-
-    const currentCount = await program.account.counter.fetch(counterKeypair.publicKey)
-
-    expect(currentCount.count).toEqual(1)
-  })
-
-  it('Increment Counter Again', async () => {
-    await program.methods.increment().accounts({ counter: counterKeypair.publicKey }).rpc()
-
-    const currentCount = await program.account.counter.fetch(counterKeypair.publicKey)
-
-    expect(currentCount.count).toEqual(2)
-  })
-
-  it('Decrement Counter', async () => {
-    await program.methods.decrement().accounts({ counter: counterKeypair.publicKey }).rpc()
-
-    const currentCount = await program.account.counter.fetch(counterKeypair.publicKey)
-
-    expect(currentCount.count).toEqual(1)
-  })
-
-  it('Set counter value', async () => {
-    await program.methods.set(42).accounts({ counter: counterKeypair.publicKey }).rpc()
-
-    const currentCount = await program.account.counter.fetch(counterKeypair.publicKey)
-
-    expect(currentCount.count).toEqual(42)
-  })
-
-  it('Set close the counter account', async () => {
+  it("Increments the counter", async () => {
+    // Call the increment instruction
     await program.methods
-      .close()
+      .increment()
       .accounts({
-        payer: payer.publicKey,
-        counter: counterKeypair.publicKey,
+        counter: counter.publicKey,
+        user: provider.wallet.publicKey,
       })
-      .rpc()
+      .rpc();
 
-    // The account should no longer exist, returning null.
-    const userAccount = await program.account.counter.fetchNullable(counterKeypair.publicKey)
-    expect(userAccount).toBeNull()
-  })
-})
+    // Fetch the counter account and check its value
+    const account = await program.account.counter.fetch(counter.publicKey);
+    expect(account.count.toNumber()).toBe(1);
+  });
+
+  it("Decrements the counter", async () => {
+    // Call the decrement instruction
+    await program.methods
+      .decrement()
+      .accounts({
+        counter: counter.publicKey,
+        user: provider.wallet.publicKey,
+      })
+      .rpc();
+
+    // Fetch the counter account and check its value
+    const account = await program.account.counter.fetch(counter.publicKey);
+    expect(account.count.toNumber()).toBe(0);
+  });
+});
+

@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 use anchor_lang::solana_program::{program::invoke, system_instruction};
 
 // Program ID declaration (replace with your own ID when deploying)
-declare_id!("8tfuvG2FVPUE41keGjgybaftAiw9UQBK3FGtYxMyzJ5W");
+declare_id!("CeS7WEPrgnfvgLrVPw3BmTDkt9hz6Cu9oUb1ZPjCMymm");
 
 // Constants
 pub const ANCHOR_DISCRIMINATOR_SIZE: usize = 8;
@@ -82,7 +82,7 @@ pub struct Transaction {
 
 // Program Module
 #[program]
-pub mod fundus {
+pub mod crowdfunding {
     use super::*;
 
     // Initialize the program
@@ -471,6 +471,7 @@ pub struct WithdrawCtx<'info> {
     #[account(mut)]
     pub program_state: Account<'info, ProgramState>,
 
+    /// CHECK: This is the platform's account which must match program_state.platform_address
     #[account(mut)]
     pub platform_address: AccountInfo<'info>,
 
