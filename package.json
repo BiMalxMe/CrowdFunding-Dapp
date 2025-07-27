@@ -1,0 +1,63 @@
+{
+    "name": "crowdfunding",
+    "scripts": {
+        "anchor": "cd anchor && anchor",
+        "anchor-build": "cd anchor && anchor build",
+        "anchor-localnet": "cd anchor && anchor localnet",
+        "anchor-test": "cd anchor && anchor test",
+        "build": "next build",
+        "ci": "npm run build && npm run lint && npm run format:check",
+        "dev": "next dev --turbopack",
+        "format": "prettier --write .",
+        "format:check": "prettier --check .",
+        "lint": "next lint",
+        "start": "next start"
+    },
+    "description": "Next.js, Tailwind, @solana/web3.js, Wallet Adapter, Anchor Counter program",
+    "keywords": [
+        "anchor-counter",
+        "legacy",
+        "nextjs",
+        "react",
+        "solana-web3js",
+        "tailwind",
+        "typescript",
+        "wallet-adapter"
+    ],
+    "version": "0.0.0",
+    "private": true,
+    "dependencies": {
+        "@coral-xyz/anchor": "^0.31.1",
+        "@radix-ui/react-dialog": "^1.1.14",
+        "@radix-ui/react-dropdown-menu": "^2.1.15",
+        "@radix-ui/react-label": "^2.1.7",
+        "@radix-ui/react-slot": "^1.2.3",
+        "@solana/spl-token": "0.4.13",
+        "@solana/wallet-adapter-base": "0.9.27",
+        "@solana/wallet-adapter-react": "0.15.39",
+        "@solana/wallet-adapter-react-ui": "0.9.39",
+        "@solana/web3.js": "^1.87.6",
+        "add": "^2.0.6",
+        "anchor-bankrun": "^0.5.0",
+        "bun": "^1.2.19"
+    },
+    "devDependencies": {
+        "@eslint/eslintrc": "^3.3.1",
+        "@tailwindcss/postcss": "^4.1.11",
+        "@types/bn.js": "^5.1.0",
+        "@types/chai": "^4.3.0",
+        "@types/jest": "^30.0.0",
+        "@types/mocha": "^9.0.0",
+        "@types/node": "^24.0.12",
+        "chai": "^4.3.0",
+        "eslint": "^9.30.1",
+        "eslint-config-next": "15.3.5",
+        "jest": "^30.0.4",
+        "mocha": "^9.0.0",
+        "prettier": "^2.6.2",
+        "tailwindcss": "^4.1.11",
+        "ts-jest": "^29.4.0",
+        "ts-mocha": "^10.0.0",
+        "typescript": "^4.3.5"
+    }
+}
