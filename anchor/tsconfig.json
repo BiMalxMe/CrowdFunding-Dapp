@@ -8,5 +8,12 @@
     "strict": true,
     "outDir": "dist"
   },
-  "include": ["tests", "src"]
+  "include": [
+    "tests",
+    "src",
+    "target/types" // <--- ADD THIS LINE
+  ],
+  "exclude": [ // <--- Optionally add this to prevent unnecessary compilation
+    "node_modules"
+  ]
 }
