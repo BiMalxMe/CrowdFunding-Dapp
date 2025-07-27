@@ -128,4 +128,26 @@ describe("crowdfunding", () => {
             expect(finalCreatorBalance).toBeLessThan(initialCreatorBalance);
         });
     });
+     it('should fail to create campaign with zero goal', async () => {
+            const [invalidCampaignPda] = PublicKey.findProgramAddressSync(
+                [Buffer.from("campaign"), new anchor.BN(2).toArrayLike(Buffer, "le", 8)],
+                crowdfundingAddress
+            );
+
+            try {
+                await crowdfundingProgram.methods
+                    .createCampaign("Valid Title", campaignDescription, campaignImageUrl, new anchor.BN(0))
+                    .accounts({
+                        creator: creator.publicKey,
+                        campaign: invalidCampaignPda,
+                        programState: programStatePda,
+                    })
+                    .signers([creator])
+                    .rpc();
+                
+                expect(true).toBe(false); // Should not reach here
+            } catch (error : any) {
+                expect(error.error.errorCode.code).toBe("InvalidGoalAmount");
+            }
+        });
 });
