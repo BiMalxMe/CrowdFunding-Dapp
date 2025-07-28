@@ -10,6 +10,7 @@ import {
 } from "@solana/web3.js";
 import { Crowdfunding } from "../target/types/crowdfunding";
 import { expect, it, beforeAll, describe } from "@jest/globals";
+import { notEqual } from "assert";
 
 const crowdfundingAddress = new PublicKey(
   "CeS7WEPrgnfvgLrVPw3BmTDkt9hz6Cu9oUb1ZPjCMymm"
@@ -548,6 +549,82 @@ describe("crowdfunding", () => {
           expect(true).toBe(false); // Should not reach here
       } catch (error : any) {
           expect(error.error.errorCode.code).toBe("InvalidWithdrawalAmount");
+      }
+  });
+});
+describe("Update Platform Settings", () => {
+  it('should allow deployer to update platform fee', async () => {
+      const newPlatformFee = new anchor.BN(10); // 10 basis points (0.1%)
+
+      await crowdfundingProgram.methods
+          .updatePlatformSettings(newPlatformFee)
+          .accounts({
+              updater: deployer.publicKey,
+          })
+          .signers([deployer])
+          .rpc();
+
+      const programState = await crowdfundingProgram.account.programState.fetch(programStatePda);
+      expect(programState.platformFee.toNumber()).toBe(newPlatformFee.toNumber());
+  });
+
+  it('should fail to update platform settings with unauthorized user', async () => {
+    try {
+        await crowdfundingProgram.methods
+            .updatePlatformSettings(new anchor.BN(15))
+            .accounts({
+                updater: creator.publicKey, // Wrong updater
+            })
+            .signers([creator])
+            .rpc();
+        
+        expect(true).toBe(false); // Should not reach here
+    } catch (error : any) {
+        expect(error.error.errorCode.code).toBe("Unauthorized");
+    }
+});
+})
+describe("Delete Campaign", () => {
+
+  it('should allow creator to delete campaign', async () => {
+    const initialCreatorBalance = await context.banksClient.getBalance(creator.publicKey);
+
+    await crowdfundingProgram.methods
+        .deleteCampaign(campaignId)
+        .accounts({
+            creator: creator.publicKey,
+        })
+        .signers([creator])
+        .rpc();
+
+
+        // note
+        // we didnot did         await crowdfundingProgram.account.campaign.fetch(campaignPda);
+        // beacuse our rust code doesnot delete the campaign but deactivates it
+
+       const campaign = await crowdfundingProgram.account.campaign.fetch(campaignPda);
+       expect(campaign.active).toBe(false); // Should be deactivated
+
+
+    // Creator should get rent back
+    const finalCreatorBalance = await context.banksClient.getBalance(creator.publicKey);
+    //gas fee
+    expect(finalCreatorBalance).toBeGreaterThanOrEqual(initialCreatorBalance);
+});
+
+  it('should fail to delete non-existent campaign', async () => {
+      try {
+          await crowdfundingProgram.methods
+              .deleteCampaign(campaignId)
+              .accounts({
+                  creator: creator.publicKey,
+              })
+              .signers([creator])
+              .rpc();
+          
+          expect(true).toBe(false); // Should not reach here
+      } catch (error : any) {
+          expect(error.message).toContain("Campaign is inactive");
       }
   });
 });
