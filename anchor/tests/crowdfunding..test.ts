@@ -26,6 +26,7 @@ describe("crowdfunding", () => {
   let donor2: Keypair;
   let transactionPda1: PublicKey;
   let withdrawlPDA: PublicKey;
+  let withdrawlPDAUnauthorized:PublicKey;
 
   let programStatePda: PublicKey;
   let campaignPda: PublicKey;
@@ -488,6 +489,66 @@ describe("crowdfunding", () => {
         expect(finalCampaignBalance).toBeLessThan(initialCampaignBalance);
         expect(finalPlatformBalance).toBeGreaterThan(initialPlatformBalance); // Platform fee
     });
-    
+    it('should fail withdrawal by unauthorized user', async () => {
+
+      const campaignBefore = await crowdfundingProgram.account.campaign.fetch(campaignPda);
+      const nextWithdrawlCount = campaignBefore.withdrawals.add(new anchor.BN(1));
+      const [withdrawlPDAUnauthorized] = PublicKey.findProgramAddressSync(
+        [
+            Buffer.from("withdraw"),
+            donor1.publicKey.toBuffer(),
+            campaignId.toArrayLike(Buffer, "le", 8),
+            nextWithdrawlCount.toArrayLike(Buffer, "le", 8),
+        ],
+        crowdfundingAddress
+    );
+
+      try {
+          await crowdfundingProgram.methods
+              .withdraw(campaignId, withdrawAmount)
+              .accounts({
+                  creator: donor1.publicKey, // Wrong creator
+                  transaction: withdrawlPDAUnauthorized,
+                  programState: programStatePda,
+                  platformAddress: deployer.publicKey,
+              })
+              .signers([donor1])
+              .rpc();
+              //end above this
+      } catch (error : any) {
+          expect(error.error.errorCode.code).toBe("Unauthorized");
+      }
+  });
+
+  it('should fail withdrawal of insufficient amount', async () => {
+    const campaignBefore = await crowdfundingProgram.account.campaign.fetch(campaignPda);
+    const nextWithdrawlCount = campaignBefore.withdrawals.add(new anchor.BN(1));
+
+    const [withdrawlInsufficientAmountPDA] = PublicKey.findProgramAddressSync(
+        [
+            Buffer.from("withdraw"),
+            creator.publicKey.toBuffer(),
+            campaignId.toArrayLike(Buffer, "le", 8),
+            nextWithdrawlCount.toArrayLike(Buffer, "le", 8),
+        ],
+        crowdfundingAddress
+    );
+      try {
+          await crowdfundingProgram.methods
+              .withdraw(campaignId, new anchor.BN(0.5 * LAMPORTS_PER_SOL)) // Less than 1 SOL
+              .accounts({
+                  creator: creator.publicKey,
+                  transaction: withdrawlInsufficientAmountPDA,
+                  programState: programStatePda,
+                  platformAddress: deployer.publicKey,
+              })
+              .signers([creator])
+              .rpc();
+          
+          expect(true).toBe(false); // Should not reach here
+      } catch (error : any) {
+          expect(error.error.errorCode.code).toBe("InvalidWithdrawalAmount");
+      }
+  });
 });
 });
