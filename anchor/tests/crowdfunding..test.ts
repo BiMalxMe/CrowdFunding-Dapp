@@ -25,8 +25,7 @@ describe("crowdfunding", () => {
   let donor1: Keypair;
   let donor2: Keypair;
   let transactionPda1: PublicKey;
-  let transactionPda2: PublicKey;
-
+  let withdrawlPDA: PublicKey;
 
   let programStatePda: PublicKey;
   let campaignPda: PublicKey;
@@ -53,7 +52,7 @@ describe("crowdfunding", () => {
     donor2 = Keypair.generate();
 
     // Fund accounts
-    const accounts = [deployer, creator,donor1,donor2];
+    const accounts = [deployer, creator, donor1, donor2];
     for (const account of accounts) {
       const fundAmount = LAMPORTS_PER_SOL * 20; // 20 SOL each
       const transferTransaction = new Transaction().add(
@@ -202,7 +201,7 @@ describe("crowdfunding", () => {
       }
     });
     it("should fail to create campaign with invalid title", async () => {
-     const [campaignPdaforlongtitle] = PublicKey.findProgramAddressSync(
+      const [campaignPdaforlongtitle] = PublicKey.findProgramAddressSync(
         [
           Buffer.from("campaign"),
           new anchor.BN(2).toArrayLike(Buffer, "le", 8),
@@ -263,7 +262,7 @@ describe("crowdfunding", () => {
       const campaign = await crowdfundingProgram.account.campaign.fetch(
         campaignPda
       );
-      console.log(campaign)
+      console.log(campaign);
       expect(campaign.title).toBe(newTitle);
       expect(campaign.description).toBe(newDescription);
       expect(campaign.imageUrl).toBe(newImageUrl);
@@ -281,59 +280,70 @@ describe("crowdfunding", () => {
       );
       expect(finalCreatorBalance).toBeLessThanOrEqual(initialCreatorBalance);
     });
-    it('should fail to update campaign with unauthorized user', async () => {
+    it("should fail to update campaign with unauthorized user", async () => {
       try {
-          await crowdfundingProgram.methods
-              .updateCampaign(campaignId, "Unauthorized Update", campaignDescription, campaignImageUrl, campaignGoal)
-              .accounts({
-                  creator: donor1.publicKey, // Wrong creator
-              })
-              .signers([donor1])
-              .rpc();
-          
-      } catch (error :any) {
-          expect(error.error.errorCode.code).toBe("Unauthorized");
+        await crowdfundingProgram.methods
+          .updateCampaign(
+            campaignId,
+            "Unauthorized Update",
+            campaignDescription,
+            campaignImageUrl,
+            campaignGoal
+          )
+          .accounts({
+            creator: donor1.publicKey, // Wrong creator
+          })
+          .signers([donor1])
+          .rpc();
+      } catch (error: any) {
+        expect(error.error.errorCode.code).toBe("Unauthorized");
       }
+    });
   });
-  });
-  
-  
+
   describe("Donate", () => {
     const donationAmount1 = new anchor.BN(2 * LAMPORTS_PER_SOL); // 2 SOL
     const donationAmount2 = new anchor.BN(3 * LAMPORTS_PER_SOL); // 3 SOL
 
-  
-    it('should allow first donation', async () => {
-      const initialDonorBalance = await context.banksClient.getBalance(donor1.publicKey);
-      const initialCampaignBalance = await context.banksClient.getBalance(campaignPda);
+    it("should allow first donation", async () => {
+      const initialDonorBalance = await context.banksClient.getBalance(
+        donor1.publicKey
+      );
+      const initialCampaignBalance = await context.banksClient.getBalance(
+        campaignPda
+      );
 
       // Get current campaign state to calculate donor count
-      const campaignBefore = await crowdfundingProgram.account.campaign.fetch(campaignPda);
+      const campaignBefore = await crowdfundingProgram.account.campaign.fetch(
+        campaignPda
+      );
       const nextDonorCount = campaignBefore.donors.add(new anchor.BN(1));
 
       // PDa creation itself
       const [transactionPda] = PublicKey.findProgramAddressSync(
-          [
-              Buffer.from("donor"),                                   
-              donor1.publicKey.toBuffer(),                           
-              campaignId.toArrayLike(Buffer, "le", 8),               
-              nextDonorCount.toArrayLike(Buffer, "le", 8)            
-          ],
-          crowdfundingAddress
+        [
+          Buffer.from("donor"),
+          donor1.publicKey.toBuffer(),
+          campaignId.toArrayLike(Buffer, "le", 8),
+          nextDonorCount.toArrayLike(Buffer, "le", 8),
+        ],
+        crowdfundingAddress
       );
 
       //sending the create pda on chain
       await crowdfundingProgram.methods
-          .donate(campaignId, donationAmount1)
-          .accounts({
-              donor: donor1.publicKey,
-              transaction: transactionPda, 
-          })
-          .signers([donor1])
-          .rpc();
+        .donate(campaignId, donationAmount1)
+        .accounts({
+          donor: donor1.publicKey,
+          transaction: transactionPda,
+        })
+        .signers([donor1])
+        .rpc();
 
       //  detching and testing.
-      const campaign = await crowdfundingProgram.account.campaign.fetch(campaignPda);
+      const campaign = await crowdfundingProgram.account.campaign.fetch(
+        campaignPda
+      );
       // console.log("___________________________________________________________________________")
       // console.log(campaign)
       expect(campaign.amountRaised.toNumber()).toBe(donationAmount1.toNumber());
@@ -341,46 +351,143 @@ describe("crowdfunding", () => {
       expect(campaign.balance.toNumber()).toBe(donationAmount1.toNumber());
 
       // Verify transaction record
-      const transaction = await crowdfundingProgram.account.transaction.fetch(transactionPda);
+      const transaction = await crowdfundingProgram.account.transaction.fetch(
+        transactionPda
+      );
       expect(transaction.owner.toBase58()).toBe(donor1.publicKey.toBase58());
       expect(transaction.cid.toNumber()).toBe(campaignId.toNumber());
       expect(transaction.amount.toNumber()).toBe(donationAmount1.toNumber());
       expect(transaction.credited).toBe(true);
 
       // Verify balances
-      const finalDonorBalance = await context.banksClient.getBalance(donor1.publicKey);
-      const finalCampaignBalance = await context.banksClient.getBalance(campaignPda);
-      
+      const finalDonorBalance = await context.banksClient.getBalance(
+        donor1.publicKey
+      );
+      const finalCampaignBalance = await context.banksClient.getBalance(
+        campaignPda
+      );
+
       expect(finalDonorBalance).toBeLessThan(initialDonorBalance);
       expect(finalCampaignBalance).toBeGreaterThan(initialCampaignBalance);
-  });
-  it('should allow second donation from different donor', async () => {
-    const campaignBefore = await crowdfundingProgram.account.campaign.fetch(campaignPda);
-    const nextDonorCount = campaignBefore.donors.add(new anchor.BN(1));
+    });
+    it("should allow second donation from different donor", async () => {
+      const campaignBefore = await crowdfundingProgram.account.campaign.fetch(
+        campaignPda
+      );
+      const nextDonorCount = campaignBefore.donors.add(new anchor.BN(1));
 
-    const [transactionPda1] = PublicKey.findProgramAddressSync(
-      [
-          Buffer.from("donor"),                                   
-          donor2.publicKey.toBuffer(),                           
-          campaignId.toArrayLike(Buffer, "le", 8),               
-          nextDonorCount.toArrayLike(Buffer, "le", 8)            
-      ],
-      crowdfundingAddress
-  );
-    await crowdfundingProgram.methods
+      const [transactionPda1] = PublicKey.findProgramAddressSync(
+        [
+          Buffer.from("donor"),
+          donor2.publicKey.toBuffer(),
+          campaignId.toArrayLike(Buffer, "le", 8),
+          nextDonorCount.toArrayLike(Buffer, "le", 8),
+        ],
+        crowdfundingAddress
+      );
+      await crowdfundingProgram.methods
         .donate(campaignId, donationAmount2)
         .accounts({
-            donor: donor2.publicKey,
-            transaction: transactionPda1,
+          donor: donor2.publicKey,
+          transaction: transactionPda1,
         })
         .signers([donor2])
         .rpc();
 
-    // Verify campaign updated
-    const campaign = await crowdfundingProgram.account.campaign.fetch(campaignPda);
-    expect(campaign.amountRaised.toNumber()).toBe(donationAmount1.add(donationAmount2).toNumber());
-    expect(campaign.donors.toNumber()).toBe(2);
-    expect(campaign.balance.toNumber()).toBe(donationAmount1.add(donationAmount2).toNumber());
+      // Verify campaign updated
+      const campaign = await crowdfundingProgram.account.campaign.fetch(
+        campaignPda
+      );
+      expect(campaign.amountRaised.toNumber()).toBe(
+        donationAmount1.add(donationAmount2).toNumber()
+      );
+      expect(campaign.donors.toNumber()).toBe(2);
+      expect(campaign.balance.toNumber()).toBe(
+        donationAmount1.add(donationAmount2).toNumber()
+      );
+    });
+    it("should fail donation with insufficient amount", async () => {
+      const campaignBefore = await crowdfundingProgram.account.campaign.fetch(
+        campaignPda
+      );
+      const nextDonorCount = campaignBefore.donors.add(new anchor.BN(1));
+
+      const [invalidTransactionPda] = PublicKey.findProgramAddressSync(
+        [
+          Buffer.from("donor"),
+          donor1.publicKey.toBuffer(),
+          campaignId.toArrayLike(Buffer, "le", 8),
+          nextDonorCount.toArrayLike(Buffer, "le", 8),
+        ],
+        crowdfundingAddress
+      );
+      try {
+        await crowdfundingProgram.methods
+          //less than 1 sol cant be donated
+          .donate(campaignId, new anchor.BN(0.5 * LAMPORTS_PER_SOL))
+          .accounts({
+            donor: donor1.publicKey,
+            transaction: invalidTransactionPda,
+          })
+          .signers([donor1])
+          .rpc();
+
+        expect(true).toBe(false); // Should not reach here
+      } catch (error: any) {
+        expect(error.error.errorCode.code).toBe("InvalidDonationAmount");
+      }
+    });
+  });
+  describe("Withdraw", () => {
+    const withdrawAmount = new anchor.BN(1.1 * LAMPORTS_PER_SOL); // 1.1 SOL
+    const donationAmount1 = new anchor.BN(2 * LAMPORTS_PER_SOL); // 2 SOL
+    const donationAmount2 = new anchor.BN(3 * LAMPORTS_PER_SOL); // 3 SOL
+
+    it("should allow creator to withdraw funds", async () => {
+        const campaignBefore = await crowdfundingProgram.account.campaign.fetch(campaignPda);
+        const nextWithdrawlCount = campaignBefore.withdrawals.add(new anchor.BN(1));
+
+        const initialCreatorBalance = await context.banksClient.getBalance(creator.publicKey);
+        const initialCampaignBalance = await context.banksClient.getBalance(campaignPda);
+        const initialPlatformBalance = await context.banksClient.getBalance(deployer.publicKey);
+
+        const [withdrawlPDA] = PublicKey.findProgramAddressSync(
+            [
+                Buffer.from("withdraw"),
+                creator.publicKey.toBuffer(),
+                campaignId.toArrayLike(Buffer, "le", 8),
+                nextWithdrawlCount.toArrayLike(Buffer, "le", 8),
+            ],
+            crowdfundingAddress
+        );
+
+        await crowdfundingProgram.methods
+            .withdraw(campaignId, withdrawAmount)
+            .accounts({
+                creator: creator.publicKey,
+                transaction: withdrawlPDA,
+                programState: programStatePda,
+                platformAddress: deployer.publicKey,
+            })
+            .signers([creator])
+            .rpc();
+
+        // Verify campaign updated
+        const campaign = await crowdfundingProgram.account.campaign.fetch(campaignPda);
+        expect(campaign.withdrawals.toNumber()).toBe(1); 
+        expect(campaign.balance.toNumber()).toBe(
+            donationAmount1.add(donationAmount2).sub(withdrawAmount).toNumber()
+        );
+
+        // Verify balances changed
+        const finalCreatorBalance = await context.banksClient.getBalance(creator.publicKey);
+        const finalCampaignBalance = await context.banksClient.getBalance(campaignPda);
+        const finalPlatformBalance = await context.banksClient.getBalance(deployer.publicKey);
+
+        expect(finalCreatorBalance).toBeGreaterThan(initialCreatorBalance);
+        expect(finalCampaignBalance).toBeLessThan(initialCampaignBalance);
+        expect(finalPlatformBalance).toBeGreaterThan(initialPlatformBalance); // Platform fee
+    });
+    
 });
-})
-})
+});

@@ -273,7 +273,8 @@ pub mod crowdfunding {
             return Err(ErrorCode::Unauthorized.into());
         }
 
-        if amount <= 1_000_000_000 {
+        //fixing the amount such that  less than 1 sol cant be deducted
+        if amount < 1_000_000_000 {
             return Err(ErrorCode::InvalidWithdrawalAmount.into());
         }
 
