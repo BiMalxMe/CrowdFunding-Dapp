@@ -10,7 +10,6 @@ import {
 } from "@solana/web3.js";
 import { Crowdfunding } from "../target/types/crowdfunding";
 import { expect, it, beforeAll, describe } from "@jest/globals";
-import { notEqual } from "assert";
 
 const crowdfundingAddress = new PublicKey(
   "CeS7WEPrgnfvgLrVPw3BmTDkt9hz6Cu9oUb1ZPjCMymm"
@@ -441,9 +440,9 @@ describe("crowdfunding", () => {
     });
   });
   describe("Withdraw", () => {
-    const withdrawAmount = new anchor.BN(1.1 * LAMPORTS_PER_SOL); // 1.1 SOL
-    const donationAmount1 = new anchor.BN(2 * LAMPORTS_PER_SOL); // 2 SOL
-    const donationAmount2 = new anchor.BN(3 * LAMPORTS_PER_SOL); // 3 SOL
+    const withdrawAmount = new anchor.BN(1.1 * LAMPORTS_PER_SOL);
+    const donationAmount1 = new anchor.BN(2 * LAMPORTS_PER_SOL); 
+    const donationAmount2 = new anchor.BN(3 * LAMPORTS_PER_SOL); 
 
     it("should allow creator to withdraw funds", async () => {
         const campaignBefore = await crowdfundingProgram.account.campaign.fetch(campaignPda);
@@ -599,7 +598,7 @@ describe("Delete Campaign", () => {
 
 
         // note
-        // we didnot did         await crowdfundingProgram.account.campaign.fetch(campaignPda);
+        // we didnot did await crowdfundingProgram.account.campaign.fetch(campaignPda);
         // beacuse our rust code doesnot delete the campaign but deactivates it
 
        const campaign = await crowdfundingProgram.account.campaign.fetch(campaignPda);

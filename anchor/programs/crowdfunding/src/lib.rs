@@ -1,13 +1,12 @@
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::{program::invoke, system_instruction};
 
-// Program ID declaration (replace with your own ID when deploying)
 declare_id!("CeS7WEPrgnfvgLrVPw3BmTDkt9hz6Cu9oUb1ZPjCMymm");
 
-// Constants
+// constants
 pub const ANCHOR_DISCRIMINATOR_SIZE: usize = 8;
 
-// Error Codes
+// error codes
 #[error_code]
 pub enum ErrorCode {
     #[msg("The program has already been initialized.")]
@@ -40,7 +39,7 @@ pub enum ErrorCode {
     InvalidPlatformFee,
 }
 
-// State Accounts
+// state accounts
 #[account]
 #[derive(InitSpace)]
 pub struct ProgramState {
@@ -80,12 +79,11 @@ pub struct Transaction {
     pub credited: bool,
 }
 
-// Program Module
 #[program]
 pub mod crowdfunding {
     use super::*;
 
-    // Initialize the program
+    // initialize the program
     pub fn initialize(ctx: Context<InitializeCtx>) -> Result<()> {
         let state = &mut ctx.accounts.program_state;
         let deployer = &ctx.accounts.deployer;
@@ -102,7 +100,7 @@ pub mod crowdfunding {
         Ok(())
     }
 
-    // Create a new campaign
+    // create a new campaign
     pub fn create_campaign(
         ctx: Context<CreateCampaignCtx>,
         title: String,
@@ -143,7 +141,7 @@ pub mod crowdfunding {
         Ok(())
     }
 
-    // Update campaign details
+    // update campaign details
     pub fn update_campaign(
         ctx: Context<UpdateCampaignCtx>,
         cid: u64,
@@ -184,7 +182,7 @@ pub mod crowdfunding {
         Ok(())
     }
 
-    // Delete (deactivate) a campaign
+    // delete (deactivate) a campaign
     pub fn delete_campaign(ctx: Context<DeleteCampaignCtx>, cid: u64) -> Result<()> {
         let campaign = &mut ctx.accounts.campaign;
         let creator = &mut ctx.accounts.creator;
@@ -206,7 +204,7 @@ pub mod crowdfunding {
         Ok(())
     }
 
-    // Donate to a campaign
+    // donate to a campaign
     pub fn donate(ctx: Context<DonateCtx>, cid: u64, amount: u64) -> Result<()> {
         let campaign = &mut ctx.accounts.campaign;
         let donor = &mut ctx.accounts.donor;
@@ -257,7 +255,7 @@ pub mod crowdfunding {
         Ok(())
     }
 
-    // Withdraw funds from a campaign
+    // withdraw funds from a campaign
     pub fn withdraw(ctx: Context<WithdrawCtx>, cid: u64, amount: u64) -> Result<()> {
         let campaign = &mut ctx.accounts.campaign;
         let creator = &ctx.accounts.creator;
@@ -313,7 +311,7 @@ pub mod crowdfunding {
         Ok(())
     }
 
-    // Update platform settings
+    // update platform settings
     pub fn update_platform_settings(
         ctx: Context<UpdatePlatformSettingsCtx>,
         new_platform_fee: u64,
@@ -335,7 +333,7 @@ pub mod crowdfunding {
     }
 }
 
-// Contexts
+// contexts
 #[derive(Accounts)]
 pub struct InitializeCtx<'info> {
     #[account(
@@ -472,7 +470,7 @@ pub struct WithdrawCtx<'info> {
     #[account(mut)]
     pub program_state: Account<'info, ProgramState>,
 
-    /// CHECK: This is the platform's account which must match program_state.platform_address
+    /// check: this is the platform's account which must match program_state.platform_address
     #[account(mut)]
     pub platform_address: AccountInfo<'info>,
 
