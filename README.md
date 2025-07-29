@@ -3,6 +3,7 @@
 A decentralized crowdfunding platform built on Solana using Anchor.
 
 ## Overview
+<img width="1113" height="438" alt="Screen Shot 2025-07-28 at 11 10 39" src="https://github.com/user-attachments/assets/7e23d191-18f4-434b-810e-e94a7897ab12" />
 
 CrowdFunding Dapp enables anyone to create, manage, and contribute to fundraising campaigns on the Solana blockchain. Campaign creators can set funding goals, share their stories, and securely withdraw raised funds. Donors can transparently support causes they care about, with all transactions recorded on-chain.
 
