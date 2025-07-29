@@ -89,6 +89,7 @@ pub mod crowdfunding {
         let deployer = &ctx.accounts.deployer;
 
         if state.initialized {
+            msg!("Program already initialized");
             return Err(ErrorCode::AlreadyInitialized.into());
         }
 
@@ -97,6 +98,7 @@ pub mod crowdfunding {
         state.platform_address = deployer.key();
         state.initialized = true;
 
+        msg!("Program initialized successfully");
         Ok(())
     }
 
@@ -112,15 +114,19 @@ pub mod crowdfunding {
         let state = &mut ctx.accounts.program_state;
 
         if title.len() > 64 {
+            msg!("Title too long");
             return Err(ErrorCode::TitleTooLong.into());
         }
         if description.len() > 512 {
+            msg!("Description too long");
             return Err(ErrorCode::DescriptionTooLong.into());
         }
         if image_url.len() > 256 {
+            msg!("Image URL too long");
             return Err(ErrorCode::ImageUrlTooLong.into());
         }
         if goal < 1_000_000_000 {
+            msg!("Invalid goal amount");
             return Err(ErrorCode::InvalidGoalAmount.into());
         }
 
@@ -138,6 +144,7 @@ pub mod crowdfunding {
         campaign.timestamp = Clock::get()?.unix_timestamp as u64;
         campaign.active = true;
 
+        msg!("Campaign created successfully");
         Ok(())
     }
 
@@ -154,23 +161,29 @@ pub mod crowdfunding {
         let creator = &mut ctx.accounts.creator;
 
         if campaign.creator != creator.key() {
+            msg!("Unauthorized update attempt");
             return Err(ErrorCode::Unauthorized.into());
         }
 
         if campaign.cid != cid {
+            msg!("Campaign not found for update");
             return Err(ErrorCode::CampaignNotFound.into());
         }
 
         if title.len() > 64 {
+            msg!("Title too long on update");
             return Err(ErrorCode::TitleTooLong.into());
         }
         if description.len() > 512 {
+            msg!("Description too long on update");
             return Err(ErrorCode::DescriptionTooLong.into());
         }
         if image_url.len() > 256 {
+            msg!("Image URL too long on update");
             return Err(ErrorCode::ImageUrlTooLong.into());
         }
         if goal < 1_000_000_000 {
+            msg!("Invalid goal amount on update");
             return Err(ErrorCode::InvalidGoalAmount.into());
         }
 
@@ -179,6 +192,7 @@ pub mod crowdfunding {
         campaign.image_url = image_url;
         campaign.goal = goal;
 
+        msg!("Campaign updated successfully");
         Ok(())
     }
 
@@ -188,19 +202,23 @@ pub mod crowdfunding {
         let creator = &mut ctx.accounts.creator;
 
         if campaign.creator != creator.key() {
+            msg!("Unauthorized delete attempt");
             return Err(ErrorCode::Unauthorized.into());
         }
 
         if campaign.cid != cid {
+            msg!("Campaign not found for delete");
             return Err(ErrorCode::CampaignNotFound.into());
         }
 
         if !campaign.active {
+            msg!("Campaign already inactive");
             return Err(ErrorCode::InactiveCampaign.into());
         }
 
         campaign.active = false;
 
+        msg!("Campaign deactivated successfully");
         Ok(())
     }
 
@@ -211,18 +229,22 @@ pub mod crowdfunding {
         let transaction = &mut ctx.accounts.transaction;
 
         if campaign.cid != cid {
+            msg!("Campaign not found for donation");
             return Err(ErrorCode::CampaignNotFound.into());
         }
 
         if !campaign.active {
+            msg!("Inactive campaign for donation");
             return Err(ErrorCode::InactiveCampaign.into());
         }
 
         if amount < 1_000_000_000 {
+            msg!("Donation amount too low");
             return Err(ErrorCode::InvalidDonationAmount.into());
         }
 
         if campaign.amount_raised >= campaign.goal {
+            msg!("Campaign goal already reached");
             return Err(ErrorCode::CampaignGoalActualized.into());
         }
 
@@ -237,9 +259,9 @@ pub mod crowdfunding {
             &[donor.to_account_info(), campaign.to_account_info()],
         );
 
-        if let Err(e) = result {
-            msg!("Donation transfer failed: {:?}", e);
-            return Err(e.into());
+        if let Err(_e) = result {
+            msg!("Donation transfer failed");
+            return Err(ErrorCode::InsufficientFund.into());
         }
 
         campaign.amount_raised += amount;
@@ -252,6 +274,7 @@ pub mod crowdfunding {
         transaction.timestamp = Clock::get()?.unix_timestamp as u64;
         transaction.credited = true;
 
+        msg!("Donation successful");
         Ok(())
     }
 
@@ -264,29 +287,34 @@ pub mod crowdfunding {
         let platform_account_info = &ctx.accounts.platform_address;
 
         if campaign.cid != cid {
+            msg!("Campaign not found for withdrawal");
             return Err(ErrorCode::CampaignNotFound.into());
         }
 
         if campaign.creator != creator.key() {
+            msg!("Unauthorized withdrawal attempt");
             return Err(ErrorCode::Unauthorized.into());
         }
 
         //fixing the amount such that  less than 1 sol cant be deducted
         if amount < 1_000_000_000 {
+            msg!("Withdrawal amount too low");
             return Err(ErrorCode::InvalidWithdrawalAmount.into());
         }
 
         if amount > campaign.balance {
+            msg!("Withdrawal exceeds campaign balance");
             return Err(ErrorCode::CampaignGoalActualized.into());
         }
 
         if platform_account_info.key() != state.platform_address {
+            msg!("Invalid platform address for withdrawal");
             return Err(ErrorCode::InvalidPlatformAddress.into());
         }
 
         let rent_balance = Rent::get()?.minimum_balance(campaign.to_account_info().data_len());
         if amount > **campaign.to_account_info().lamports.borrow() - rent_balance {
-            msg!("Withdrawal exceed campaign's usable balance");
+            msg!("Withdrawal exceeds campaign's usable balance");
             return Err(ErrorCode::InsufficientFund.into());
         }
 
@@ -308,6 +336,7 @@ pub mod crowdfunding {
         transaction.timestamp = Clock::get()?.unix_timestamp as u64;
         transaction.credited = false;
 
+        msg!("Withdrawal successful");
         Ok(())
     }
 
@@ -320,15 +349,18 @@ pub mod crowdfunding {
         let updater = &ctx.accounts.updater;
 
         if updater.key() != state.platform_address {
+            msg!("Unauthorized platform settings update attempt");
             return Err(ErrorCode::Unauthorized.into());
         }
 
         if !(1..=15).contains(&new_platform_fee) {
+            msg!("Invalid platform fee update attempt");
             return Err(ErrorCode::InvalidPlatformFee.into());
         }
 
         state.platform_fee = new_platform_fee;
 
+        msg!("Platform settings updated successfully");
         Ok(())
     }
 }
