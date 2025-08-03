@@ -1,5 +1,8 @@
 # CrowdFunding Dapp
 
+## Frontend Repo in
+https://github.com/BiMalxMe/FundingSOL
+
 A decentralized crowdfunding platform built on Solana using Anchor.
 
 ## Overview
